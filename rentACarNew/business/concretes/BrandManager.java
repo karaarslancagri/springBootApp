@@ -1,54 +1,74 @@
 package kodlama.io.rentACarNew.business.concretes;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import kodlama.io.rentACarNew.business.abstracts.BrandService;
 import kodlama.io.rentACarNew.business.requests.CreateBrandRequest;
+import kodlama.io.rentACarNew.business.requests.UpdateBrandRequest;
 import kodlama.io.rentACarNew.business.responses.GetAllBrandsResponse;
+import kodlama.io.rentACarNew.business.responses.GetByIdBrandResponse;
+import kodlama.io.rentACarNew.core.utilities.mappers.ModelMapperService;
 import kodlama.io.rentACarNew.dataAccess.abstracts.BrandRepository;
 import kodlama.io.rentACarNew.entities.concretes.Brand;
+import lombok.AllArgsConstructor;
 
 @Service
+@AllArgsConstructor
 public class BrandManager implements BrandService {
-	
-	private BrandRepository brandRepository;
-	
-	@Autowired
-	public BrandManager(BrandRepository brandRepository) {
-		this.brandRepository = brandRepository;
-	}
 
+	private BrandRepository brandRepository;
+	private ModelMapperService modelMapperService;
 
 	@Override
 	public List<GetAllBrandsResponse> getAll() {
-		
+
 		List<Brand> brands = brandRepository.findAll();
-		List<GetAllBrandsResponse> brandsResponse = new ArrayList<GetAllBrandsResponse>(); 
 		
+
+		// stream() --> for eachin yaptığını yapar.
 		
-		for (Brand brand : brands) {
-			GetAllBrandsResponse responseItem = new GetAllBrandsResponse();
-			responseItem.setId(brand.getId());
-			responseItem.setName(brand.getName());
-			brandsResponse.add(responseItem);
-		}
-		
+		List<GetAllBrandsResponse> brandsResponse = brands.stream()
+				.map(brand -> this.modelMapperService.forResponse()
+						.map(brand, GetAllBrandsResponse.class)).collect(Collectors.toList());
+
 		return brandsResponse;
 	}
 
-
 	@Override
 	public void add(CreateBrandRequest createBrandRequest) {
+
+		Brand brand = this.modelMapperService.forRequest().map(createBrandRequest, Brand.class);
+
+		this.brandRepository.save(brand);
+
+	}
+
+	@Override
+	public GetByIdBrandResponse getById(int id) {
 		
-		Brand brand = new Brand();
-		brand.setName(createBrandRequest.getName());
+		Brand brand = this.brandRepository.findById(id).orElseThrow();
+		
+		GetByIdBrandResponse response = this.modelMapperService.forResponse().map(brand, GetByIdBrandResponse.class);
+						
+		return response;
+	}
+
+	@Override
+	public void update(UpdateBrandRequest updateBrandRequest) {
+		
+		Brand brand = this.modelMapperService.forRequest().map(updateBrandRequest, Brand.class);
 		
 		this.brandRepository.save(brand);
+	}
+
+	@Override
+	public void delete(int id) {
 		
-	} 
+		this.brandRepository.deleteById(id);
+		
+	}
 
 }
